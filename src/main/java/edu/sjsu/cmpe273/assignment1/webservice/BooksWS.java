@@ -1,21 +1,21 @@
 package edu.sjsu.cmpe273.assignment1.webservice;
 
+import edu.sjsu.cmpe273.assignment1.dto.ErrorMap;
 import edu.sjsu.cmpe273.assignment1.dto.Link;
 import edu.sjsu.cmpe273.assignment1.entity.Authors;
 import edu.sjsu.cmpe273.assignment1.entity.BookStatus;
 import edu.sjsu.cmpe273.assignment1.entity.Books;
 import edu.sjsu.cmpe273.assignment1.entity.Reviews;
 import edu.sjsu.cmpe273.assignment1.service.AuthorsService;
+import edu.sjsu.cmpe273.assignment1.service.BooksService;
 import edu.sjsu.cmpe273.assignment1.service.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import edu.sjsu.cmpe273.assignment1.service.BooksService;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * User: maksim
@@ -32,7 +32,6 @@ public class BooksWS {
     @Autowired
     AuthorsService authorsService;
 
-    AtomicLong booksPageCounter = new AtomicLong();
     private static final SimpleDateFormat sdfGTM = new SimpleDateFormat("MM/dd/yyyy");
     static {
         sdfGTM.setTimeZone(TimeZone.getTimeZone("GMT"));
@@ -79,9 +78,16 @@ public class BooksWS {
      *      }
      */
     @RequestMapping(value = "/", method= RequestMethod.POST, consumes = "application/json" ,produces = "application/json")
-    @ResponseStatus( HttpStatus.CREATED )
-    public @ResponseBody Map<String, Object> save(@RequestBody(required = true) Books book){
+    public ResponseEntity<Map<String, Object>> save(@RequestBody(required = true) Books book){
         Books savedBook = booksService.save(book);
+
+        if(savedBook == null){
+            String e = "Was not able to save new book";
+            HttpStatus es = HttpStatus.INTERNAL_SERVER_ERROR;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
 
         Map<String, Object> responseMap = new HashMap<String, Object>();
 
@@ -94,7 +100,7 @@ public class BooksWS {
 
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.CREATED);
     }
 
     /**
@@ -130,15 +136,15 @@ public class BooksWS {
      *     }
      */
     @RequestMapping(value = "/{isbn}", method= RequestMethod.GET ,produces = "application/json")
-    @ResponseStatus( HttpStatus.OK )
-    public Map<String, Object> get(@PathVariable("isbn") Long isbn){
-
-        Map<String, Object> responseMap = new HashMap<String, Object>();
+    public ResponseEntity<Map<String, Object>> get(@PathVariable("isbn") Long isbn){
 
         // 1. BOOK
         Books b = booksService.findByISBN(isbn);
         if(b == null){
-            return responseMap;
+            String e = "Was not able to fine a book by its isbn [" + isbn + "]";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
         }
 
 
@@ -173,10 +179,11 @@ public class BooksWS {
             links.add(new Link("view-all-reviews",  "/books/" + b.getIsbn() + "/reviews",   "GET"));
         }
 
+        Map<String, Object> responseMap = new HashMap<String, Object>();
         responseMap.put("book", bookMap);
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.OK);
     }
 
     /**
@@ -201,7 +208,10 @@ public class BooksWS {
         Boolean isRemoved = booksService.delete(isbn);
 
         if(! isRemoved){
-            return new ResponseEntity<Map<String, Object>>(HttpStatus.NOT_FOUND);
+            String e = "Was not able to remove book (isbn = " + isbn + ")";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
         }
 
         Link[] links =  { new Link("create-book", "/books", "POST") };
@@ -231,8 +241,7 @@ public class BooksWS {
      *            }
      */
     @RequestMapping(value = "/{isbn}", method= RequestMethod.PUT ,produces = "application/json")
-    @ResponseStatus( HttpStatus.OK )
-    public Map<String, Object> update(@PathVariable("isbn") Long isbn,
+    public ResponseEntity<Map<String, Object>> update(@PathVariable("isbn") Long isbn,
                                       @RequestParam(value = "title", required = false) String title,
                                       @RequestParam(value = "publication-date", required = false) String publication_date,
                                       @RequestParam(value = "language", required = false) String language,
@@ -242,22 +251,30 @@ public class BooksWS {
 
         Books b = booksService.findByISBN(isbn);
 
-        if(title != null)
-            b.setTitle(title);
+        try {
+            if (title != null)
+                b.setTitle(title);
 
-        if(publication_date != null)
-            b.setPublicationDate(new Date(publication_date));
+            if (publication_date != null)
+                b.setPublicationDate(new Date(publication_date));
 
-        if(language != null)
-            b.setLanguage(language);
+            if (language != null)
+                b.setLanguage(language);
 
-        if(numPages != null)
-            b.setNumPages(numPages);
+            if (numPages != null)
+                b.setNumPages(numPages);
 
-        if(status != null)
-            b.setStatus(BookStatus.valueOf(status));
+            if (status != null)
+                b.setStatus(BookStatus.valueOf(status));
+
+        } catch (Exception ex) {
+            String e = "Problem parsing data.\n" + ex.getMessage();
+            HttpStatus es = HttpStatus.INTERNAL_SERVER_ERROR;
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
 
         booksService.save(b);
+
 
         List<Link> links = new ArrayList<Link>();
         links.add(new Link("view-book",         "/books/" + b.getIsbn(),                "GET"));
@@ -272,7 +289,7 @@ public class BooksWS {
         Map<String, Object> responseMap = new HashMap<String, Object>();
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.OK);
     }
 
     /**
@@ -294,13 +311,27 @@ public class BooksWS {
      *   }
      */
     @RequestMapping(value = "/{isbn}/reviews", method= RequestMethod.POST ,produces = "application/json")
-    @ResponseStatus(HttpStatus.CREATED )
-    public Map<String, Object> newReview(@PathVariable("isbn") Long isbn,
+    public ResponseEntity<Map<String, Object>> newReview(@PathVariable("isbn") Long isbn,
                                          @RequestBody(required = true) Reviews review){
 
         review = reviewService.save(review);
+        if(review == null){
+            String e = "Was not able to save review";
+            HttpStatus es = HttpStatus.INTERNAL_SERVER_ERROR;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
 
         Books b = booksService.findByISBN(isbn);
+
+        if(b == null){
+            String e = "Was not able to fine a book by its isbn [" + isbn + "]";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
         b.addReview(review);
 
         booksService.save(b);
@@ -310,7 +341,7 @@ public class BooksWS {
         Map<String, Object> responseMap = new HashMap<String, Object>();
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.CREATED);
     }
 
     /**
@@ -334,20 +365,32 @@ public class BooksWS {
      *
      */
     @RequestMapping(value = "/{isbn}/reviews/{reviewId}", method= RequestMethod.GET, produces = "application/json")
-    @ResponseStatus(HttpStatus.OK )
-    public Map<String, Object> getReview(@PathVariable("isbn") Long isbn,
+    public ResponseEntity<Map<String, Object>> getReview(@PathVariable("isbn") Long isbn,
                                          @PathVariable("reviewId") Long reviewId){
 
-        Map<String, Object> responseMap = new HashMap<String, Object>();
         Books book = booksService.findByISBN(isbn);
+        if(book == null){
+            String e = "Was not able to fine a book by its isbn [" + isbn + "]";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
         Reviews review = reviewService.findById(reviewId);
+        if(review == null){
+            String e = "Was not able to fina a review (id = " + reviewId + ")";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
 
         Link[] links =  { new Link("view-review", "/books/" + book.getIsbn() + "/reviews/" + review.getId(), "GET") };
 
+        Map<String, Object> responseMap = new HashMap<String, Object>();
         responseMap.put("review", review);
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.OK);
     }
 
     /**
@@ -377,18 +420,23 @@ public class BooksWS {
      */
 
     @RequestMapping(value = "/{isbn}/reviews", method= RequestMethod.GET, produces = "application/json")
-    @ResponseStatus(HttpStatus.OK )
-    public Map<String, Object> viewAllReviews(@PathVariable("isbn") Long isbn){
+    public ResponseEntity<Map<String, Object>> viewAllReviews(@PathVariable("isbn") Long isbn){
 
-        Map<String, Object> responseMap = new HashMap<String, Object>();
         Books book = booksService.findByISBN(isbn);
+        if(book == null){
+            String e = "Was not able to fine a book by its isbn [" + isbn + "]";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
 
         Link[] links =  { };
 
+        Map<String, Object> responseMap = new HashMap<String, Object>();
         responseMap.put("reviews", book.getReviews());
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.OK);
     }
 
     /**
@@ -411,22 +459,35 @@ public class BooksWS {
      *
      */
     @RequestMapping(value = "/{isbn}/authors/{authorId}", method= RequestMethod.GET, produces = "application/json")
-    @ResponseStatus(HttpStatus.OK )
-    public Map<String, Object> viewBookAuthor(@PathVariable("isbn") Long isbn,
-                                              @PathVariable("authorId") Long authorId) {
+    public ResponseEntity<Map<String, Object>> viewBookAuthor(@PathVariable("isbn") Long isbn,
+                                                              @PathVariable("authorId") Long authorId) {
 
-        Map<String, Object> responseMap = new HashMap<String, Object>();
 
         Books book = booksService.findByISBN(isbn);
+        if(book == null){
+            String e = "Was not able to fine a book by its isbn [" + isbn + "]";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
         Authors author = authorsService.findById(authorId);
-        author.setBooks(null);
+        if(author == null){
+            String e = "Was not able to fine an author by id = [" + authorId + "]";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
+        author.setBooks(null); // TODO **** Need to fix this null. Right now it is causing StackOverflow error ****
 
         Link[] links =  { new Link("view-author", "/books/" + book.getIsbn() + "/authors/" + author.getId(), "GET") };
 
+        Map<String, Object> responseMap = new HashMap<String, Object>();
         responseMap.put("author", author);
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.OK);
     }
 
     /**
@@ -452,22 +513,27 @@ public class BooksWS {
              }
      */
     @RequestMapping(value = "/{isbn}/authors", method= RequestMethod.GET, produces = "application/json")
-    @ResponseStatus(HttpStatus.OK )
-    public Map<String, Object> viewAllBookAuthors(@PathVariable("isbn") Long isbn) {
-
-        Map<String, Object> responseMap = new HashMap<String, Object>();
+    public ResponseEntity<Map<String, Object>> viewAllBookAuthors(@PathVariable("isbn") Long isbn) {
 
         Books book = booksService.findByISBN(isbn);
+        if(book == null){
+            String e = "Was not able to fine a book by its isbn [" + isbn + "]";
+            HttpStatus es = HttpStatus.NOT_FOUND;
+
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
+        // TODO **** Need to fix this null. Right now it is causing StackOverflow error ****
+        for (Authors authors : book.getAuthorsList()) {
+           authors.setBooks(null);
+        }
 
         Link[] links =  { };
 
-        for (Authors authors : book.getAuthorsList()) {
-           authors.setBooks(null);
-        };
-
+        Map<String, Object> responseMap = new HashMap<String, Object>();
         responseMap.put("authors", book.getAuthorsList());
         responseMap.put("links", links);
 
-        return responseMap;
+        return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.OK);
     }
 }
