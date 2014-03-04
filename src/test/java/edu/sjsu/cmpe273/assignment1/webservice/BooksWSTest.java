@@ -2,25 +2,24 @@ package edu.sjsu.cmpe273.assignment1.webservice;
 
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
-import edu.sjsu.cmpe273.assignment1.LibraryApplication;
 
-import edu.sjsu.cmpe273.assignment1.dto.Link;
+import edu.sjsu.cmpe273.assignment1.LibraryApplication;
+import junit.framework.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.filter.CharacterEncodingFilter;
+import org.springframework.web.filter.ShallowEtagHeaderFilter;
 
 import java.util.List;
 import java.util.Map;
@@ -30,16 +29,14 @@ import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInA
 import static com.jayway.jsonassert.impl.matcher.IsCollectionWithSize.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * User: maksim
  * Date: 2/28/14 - 8:24 PM
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = LibraryApplication.class)
+@SpringApplicationConfiguration(classes = LibraryApplication    .class)
 @WebAppConfiguration
 public class BooksWSTest {
 
@@ -65,7 +62,11 @@ public class BooksWSTest {
         MockitoAnnotations.initMocks(this);
 
         // Setup Spring test in webapp-mode (same config as spring-boot)
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(wac).build();
+        this.mockMvc = MockMvcBuilders.webAppContextSetup(wac)
+                .addFilter(new ShallowEtagHeaderFilter())
+                .addFilter(new CharacterEncodingFilter())
+                .alwaysExpect(header().string("ETag", notNullValue()))
+                .build();
     }
 
 
