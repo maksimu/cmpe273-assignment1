@@ -38,7 +38,7 @@ public class LibraryApplication {
 
         /**
          * ETags header (aka Conditional GET)
-         * @return
+         * @return ShallowEtagHeaderFilter
          */
         @Bean
         public ShallowEtagHeaderFilter shallowEtagHeaderFilter() {
@@ -48,7 +48,7 @@ public class LibraryApplication {
 
         /**
          * Servlet initialization/destroy listeners
-         * @return
+         * @return ServletContextListener
          */
         @Bean
         protected ServletContextListener listener() {
@@ -67,7 +67,7 @@ public class LibraryApplication {
 
         /**
          * Enable UTF-8 Character encoding
-         * @return
+         * @return CharacterEncodingFilter
          */
         @Bean
         public CharacterEncodingFilter characterEncodingFilter() {

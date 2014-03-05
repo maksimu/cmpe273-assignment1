@@ -38,10 +38,25 @@ public class BooksWS {
     }
 
 
+    @RequestMapping(value = "", method= RequestMethod.GET, produces = "application/json")
+    public @ResponseBody
+    ResponseEntity<List<Books>> availableMethods1(){
+          return availableMethods2();
+    }
+
+
     @RequestMapping(value = "/", method= RequestMethod.GET, produces = "application/json")
     public @ResponseBody
-    List<Books> availableMethods(){
-          return booksService.getAll();
+    ResponseEntity<List<Books>> availableMethods2(){
+
+        List<Books> booksWithoutAuthor = new ArrayList<Books>();
+        for (Books b : booksService.getAll()) {
+            b.setAuthors(null);
+            booksWithoutAuthor.add(b);
+        }
+
+
+        return new ResponseEntity<List<Books>>(booksWithoutAuthor, HttpStatus.OK);
     }
 
 
@@ -77,8 +92,40 @@ public class BooksWS {
      *          ]
      *      }
      */
+
+    @RequestMapping(value = "", method= RequestMethod.POST, consumes = "application/json" ,produces = "application/json")
+    public ResponseEntity<Map<String, Object>> save1(@RequestBody(required = true) Books book){
+        return save2(book);
+    }
+
     @RequestMapping(value = "/", method= RequestMethod.POST, consumes = "application/json" ,produces = "application/json")
-    public ResponseEntity<Map<String, Object>> save(@RequestBody(required = true) Books book){
+    public ResponseEntity<Map<String, Object>> save2(@RequestBody(required = true) Books book){
+
+        // Validating
+        if(book.getTitle() == null){
+            String e = "Title cannot be null";
+            HttpStatus es = HttpStatus.BAD_REQUEST;
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
+        if(book.getTitle() == ""){
+            String e = "Title cannot be empty";
+            HttpStatus es = HttpStatus.BAD_REQUEST;
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
+        if(book.getPublicationDate() == null){
+            String e = "Publish date cannot be null";
+            HttpStatus es = HttpStatus.BAD_REQUEST;
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
+        if(book.getStatus() == null){
+            String e = "Status cannot be null";
+            HttpStatus es = HttpStatus.BAD_REQUEST;
+            return new ResponseEntity<Map<String, Object>>(new ErrorMap(e,es.getReasonPhrase()), es);
+        }
+
         Books savedBook = booksService.save(book);
 
         if(savedBook == null){
