@@ -23,8 +23,32 @@ Req #  | URI                                                | Method     |Descri
 9      | library/v1/books/{isbn}/authors                    | **GET**       |View all authors
 
 
+To start this app as a service:
+0. Check out this code to a directory and package it (`mvn package`)
 
+1. Install **supervisor** (`supervisord` command, to install `sudo apt-get install supervisor`). After installing try to start supervisor by running the following command: `sudo service supervisor start`
 
+2. Create a file `sudo vi /etc/supervisor/conf.d/cmpe273-assignment1.conf` with the following content:
+	```
+	[program:cmpe273-assignment1]
+	command=/usr/bin/java -jar /home/ubuntu/cmpe273-assignment1/target/CMPE273-Librariy-SpringBoot-1.0-SNAPSHOT.jar
+	user=ubuntu
+	autostart=true
+	autorestart=true
+	startsecs=10
+	startretries=3
+	stdout_logfile=/home/ubuntu/cmpe273-assignment1/log-cmpe273-assignment1-stdout.log
+	stderr_logfile=/home/ubuntu/cmpe273-assignment1/log-cmpe273-assignment1-stderr.log
+
+3. To control the application you would need to execute `supervisorctl`, which will present you with a prompt where you could start, stop, status of the app you specified in the `cmpe273-assignment1.conf` file.
+	
+	```
+	sudo supervisorctl
+	cmpe273-assignment1 RUNNING   pid 123123, uptime 1 day, 15:00:00
+	supervisor> stop cmpe273-assignment1
+	supervisor> start cmpe273-assignment1
+
+	
 
 
 
