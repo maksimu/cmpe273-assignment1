@@ -31,7 +31,7 @@ Check out the code from GitHub
 ------------------------------
 1. `git clone https://github.com/maksimu/cmpe273-assignment1.git`
 
-2. Check out this code to a directory and package it (`mvn package`)
+2. Build and try to run: `mvn spring-boot:run`
 
 
 Run project as a service
@@ -42,7 +42,7 @@ Run project as a service
 2. Create a file `sudo vi /etc/supervisor/conf.d/cmpe273-assignment1.conf` with the following content:
 	```
 	[program:cmpe273-assignment1]
-	command=/usr/bin/java -jar /home/ubuntu/cmpe273-assignment1/target/CMPE273-Librariy-SpringBoot-1.0-SNAPSHOT.jar
+	command=/usr/bin/mvn -f /home/ubuntu/cmpe273-assignment1/pom.xml spring-boot:run
 	user=ubuntu
 	autostart=true
 	autorestart=true
@@ -52,6 +52,7 @@ Run project as a service
 	stderr_logfile=/home/ubuntu/cmpe273-assignment1/log-cmpe273-assignment1-stderr.log
 
 3. To control the application you would need to execute `supervisorctl`, which will present you with a prompt where you could start, stop, status of the app you specified in the `cmpe273-assignment1.conf` file.
+	
 	```
 	sudo supervisorctl
 	cmpe273-assignment1 RUNNING   pid 123123, uptime 1 day, 15:00:00
@@ -59,9 +60,5 @@ Run project as a service
 	supervisor> start cmpe273-assignment1
 
 	
-
-
-
-
-
+Restart the server and try to go to `http://54.193.33.95:8080/library/v1/books`
 
