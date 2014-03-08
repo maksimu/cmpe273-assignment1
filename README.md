@@ -52,7 +52,6 @@ Run project as a service
 	stderr_logfile=/home/ubuntu/cmpe273-assignment1/log-cmpe273-assignment1-stderr.log
 
 3. To control the application you would need to execute `supervisorctl`, which will present you with a prompt where you could start, stop, status of the app you specified in the `cmpe273-assignment1.conf` file.
-	
 	```
 	sudo supervisorctl
 	cmpe273-assignment1 RUNNING   pid 123123, uptime 1 day, 15:00:00
